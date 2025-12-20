@@ -1,7 +1,7 @@
 package com.example.jetbrainstest.tests;
 
 import com.example.jetbrainstest.pages.FleetPage;
-import com.example.jetbrainstest.pages.PyCharmPage;
+import com.example.jetbrainstest.pages.SupportPyCharmPage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
