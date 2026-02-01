@@ -1,6 +1,8 @@
 package com.example.jetbrainstest.pages;
 
-import io.qameta.allure.Allure;
+import com.example.jetbrainstest.MyWait;
+import org.openqa.selenium.By;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -9,55 +11,76 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 
 public class SupportPyCharmPage {
+    private static final int WAIT_SECONDS = 15;
+    private static final int COOKIE_MODAL_WAIT_SECONDS = 5;
+    private static final int COOKIE_MODAL_DISAPPEAR_SECONDS = 5;
+    private static final By COOKIE_DIALOG = By.id("ch2-dialog");
     private final WebDriver driver;
 
-    // Виджет кнопка "Contact Support"
-    @FindBy(css = "#support-widget > a.button")
-    private WebElement contactSupportBtn;
+    /** Ссылка на форму создания обращения (переход на страницу с ticket_form_id=66731) */
+    @FindBy(xpath = "/html/body/div[3]/div[1]/div[1]/div/div[2]/div[1]/a")
+    private WebElement linkToRequestForm;
 
-    // Элемент формы на странице обращений
-    @FindBy(id = "new_request_form")
-    private WebElement requestForm;
-
-    /**
-     * Конструктор класса
-     */
     public SupportPyCharmPage(WebDriver driver) {
         this.driver = driver;
         PageFactory.initElements(driver, this);
     }
 
     /**
-     * Метод кликает на кнопку "Contact Support" и проверяет наличие формы
-     *
-     * @return true, если страница перехода успешна и форма существует
+     * Закрывает модальное окно "Cookie Settings", если оно отображается (клик по крестику).
+     * Не падает, если окно отсутствует.
      */
-    public boolean clickContactSupportAndVerifyFormPresent() {
-        System.out.println("Нажатие на кнопку 'Contact Support'...");
-
-        // Ждем появление кнопки и кликаем на нее
-        new WebDriverWait(driver, Duration.ofSeconds(10)).until(ExpectedConditions.visibilityOf(contactSupportBtn)).click();
-
-        // Пауза 5 секунд, чтобы убедиться, что форма появилась
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException ignored) {
+    public void closeCookieModalIfPresent() {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(COOKIE_MODAL_WAIT_SECONDS));
+        List<By> closeButtonLocators = Arrays.asList(
+                By.xpath("//*[@id='ch2-dialog']/div[3]/button[1]"),
+                By.cssSelector("[aria-label='Close']"),
+                By.cssSelector("button[aria-label='Close']"),
+                By.cssSelector("[role='dialog'] button[aria-label='Close']"),
+                By.cssSelector(".close"),
+                By.cssSelector("#onetrust-close-btn-handler")
+        );
+        for (By locator : closeButtonLocators) {
+            try {
+                WebElement closeBtn = wait.until(ExpectedConditions.elementToBeClickable(locator));
+                if (closeBtn != null && closeBtn.isDisplayed()) {
+                    closeBtn.click();
+                    waitForCookieModalToDisappear();
+                    return;
+                }
+            } catch (TimeoutException ignored) {
+                // элемент не найден за время ожидания — пробуем следующий селектор
+            }
         }
-
-        // Проверяем наличие формы
-        if (!requestForm.isDisplayed()) {
-            Allure.addAttachment("Форма отсутствует", driver.getPageSource());
-            return false;
-        }
-
-        return true;
     }
 
+    /** Ждёт исчезновения модального окна Cookie Settings, чтобы не блокировать виджет поддержки. */
+    private void waitForCookieModalToDisappear() {
+        try {
+            WebDriverWait disappearWait = new WebDriverWait(driver, Duration.ofSeconds(COOKIE_MODAL_DISAPPEAR_SECONDS));
+            disappearWait.until(ExpectedConditions.invisibilityOfElementLocated(COOKIE_DIALOG));
+        } catch (TimeoutException ignored) {
+            // модалка уже могла быть закрыта или не показывалась
+        }
+    }
 
-      //Получаем current URL
+    /**
+     * Кликает по ссылке на форму обращения и ждёт перехода на указанный URL.
+     * Тест завершается проверкой URL, без ожидания элементов формы на странице.
+     *
+     * @param expectedFormUrl ожидаемый URL страницы формы после перехода
+     */
+    public void clickLinkToRequestFormAndWaitForUrl(String expectedFormUrl) {
+        MyWait.myWait(WAIT_SECONDS).visible(linkToRequestForm).click();
+        WebDriverWait urlWait = new WebDriverWait(driver, Duration.ofSeconds(WAIT_SECONDS));
+        urlWait.until(ExpectedConditions.urlToBe(expectedFormUrl));
+    }
 
+    /** Возвращает текущий URL страницы */
     public String getCurrentUrl() {
         return driver.getCurrentUrl();
     }

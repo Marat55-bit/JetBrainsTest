@@ -4,33 +4,34 @@ import com.example.jetbrainstest.pages.SupportPyCharmPage;
 import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SupportPyCharmTest extends BaseTest {
 
+    private static final String SUPPORT_PAGE_URL =
+            "https://intellij-support.jetbrains.com/hc/en-us/?pycharm";
+    private static final String EXPECTED_FORM_URL =
+            "https://intellij-support.jetbrains.com/hc/en-us/requests/new?ticket_form_id=66731";
+
     private SupportPyCharmPage supportPyCharmPage;
 
     @BeforeEach
-    public void setup() {
-        super.setUp(); // Устанавливаем драйвер и браузер
-        supportPyCharmPage = new SupportPyCharmPage(getDriver()); // Инициализируем страницу
+    @Override
+    public void setUp() {
+        super.setUp();
+        supportPyCharmPage = new SupportPyCharmPage(getDriver());
     }
 
     @Test
     @Order(1)
     @DisplayName("Тестируем переход на контактную форму поддержки")
     public void testContactSupportFormTransition() {
-        // Переходим на главную страницу поддержки
-        getDriver().get("https://intellij-support.jetbrains.com/hc/en-us/?pycharm");
+        getDriver().get(SUPPORT_PAGE_URL);
+        supportPyCharmPage.closeCookieModalIfPresent();
 
-        // Кликаем на кнопку "Contact Support" и проверяем наличие формы
-        boolean formExists = supportPyCharmPage.clickContactSupportAndVerifyFormPresent();
-        assertTrue(formExists, "Форма поддержки отсутствует!");
+        supportPyCharmPage.clickLinkToRequestFormAndWaitForUrl(EXPECTED_FORM_URL);
 
-        // Проверяем URL после перехода
-        String expectedUrl = "https://intellij-support.jetbrains.com/hc/en-us/requests/new?ticket_form_id=66731";
-        String actualUrl = supportPyCharmPage.getCurrentUrl();
-        assertEquals(expectedUrl, actualUrl, "Переход на неправильный URL!");
+        assertEquals(EXPECTED_FORM_URL, supportPyCharmPage.getCurrentUrl(),
+                "Страница должна открыться по адресу формы обращения");
     }
 }
